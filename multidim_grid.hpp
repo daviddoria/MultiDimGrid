@@ -22,6 +22,8 @@ substantial portions of the Software.
 #include <type_traits>
 #include <utility> // std::index_sequence
 
+#include "c++11_support.hpp"
+
 namespace multidim {
 
 namespace _impl_multi_grid {
@@ -34,14 +36,14 @@ template<typename T, typename... Ts>
 constexpr T meta_prod(T x, Ts... xs) { return x * meta_prod(xs...); }
 
 template <typename Iter, size_t D0>
-size_t flatten(Iter first, Iter, std::index_sequence<D0> ) {
+size_t flatten(Iter first, Iter, std_support::index_sequence<D0> ) {
 	return *first;
 }
 
 template <typename Iter, size_t D0, size_t... DIMS>
-size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> ) {
+size_t flatten(Iter first, Iter last, std_support::index_sequence<D0, DIMS...> ) {
 	return *first * meta_prod(DIMS...) + 
-		flatten(std::next(first), last, std::index_sequence<DIMS...>{} );
+        flatten(std::next(first), last, std_support::index_sequence<DIMS...>{} );
 }
 
 template<typename T, size_t... DIMS>
@@ -95,7 +97,7 @@ public:
  
 	reference operator[] (const ArrayCoord& coord) { 
 		return values_[flatten(
-			coord.begin(), coord.end(), std::index_sequence<DIMS...>{})];
+            coord.begin(), coord.end(), std_support::index_sequence<DIMS...>{})];
 	}
 	const_reference operator[] (const ArrayCoord& coord) const { 
 		return const_cast<reference>(static_cast<const Grid&>(*this)[coord]); 
@@ -109,17 +111,26 @@ public:
 	// 	return const_cast<reference>(static_cast<const Grid&>(*this)(l)); 
 	// };
 
-	const auto& get_coord_from_index(size_type idx) const {
+
+    #if __cplusplus==201402L
+    const auto& get_coord_from_index(size_type idx) const {
+    #else
+    const ArrayCoord& get_coord_from_index(size_type idx) const {
+    #endif
 		return map_idx_to_coord_.at(idx);
 	}
  
 	size_type get_index_from_coord(const ArrayCoord& coord) const {
 		return flatten(
-			coord.begin(), coord.end(), std::index_sequence<DIMS...>{});
+            coord.begin(), coord.end(), std_support::index_sequence<DIMS...>{});
 	}
  
 private:
-	auto fill_map_idx_to_coord() const {
+    #if __cplusplus==201402L
+    auto fill_map_idx_to_coord() const {
+    #else
+    MapIndexToCoord fill_map_idx_to_coord() const {
+    #endif
 		MapIndexToCoord coord;
 		std::array<size_t,num_dims> size_per_dim{{DIMS...}};
 		for (size_t j = 0; j < meta_prod(DIMS...); j ++) {
@@ -136,7 +147,11 @@ private:
 	}
 
 	// for debugging/illustration purpose following ostream operator might be removed in the future
-	friend auto& operator<<(std::ostream &os, const Grid& other) {
+    #if __cplusplus==201402L
+    friend auto& operator<<(std::ostream &os, const Grid& other) {
+    #else
+    friend std::ostream& operator<<(std::ostream &os, const Grid& other) {
+    #endif
 		os << "Values : {";
 		for (auto&& v : other.values_)  { os << v << ";"; }
 		os << "\b}\nMapping index to coord :\n";

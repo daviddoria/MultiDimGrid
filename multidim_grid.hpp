@@ -65,7 +65,11 @@ public:
 	using const_iterator   = typename ArrayValues::const_iterator;
 	using difference_type  = typename ArrayValues::difference_type;
  
-	Grid() : Grid(ArrayValues{}) {} // default constructor use delegating constructor
+    #if __cplusplus==201402L
+    Grid() : Grid(ArrayValues{}) {} // default constructor use delegating constructor
+    #else
+    Grid() : Grid(ArrayValues{{}}) {} // default constructor use delegating constructor
+    #endif
 	Grid(const ArrayValues& values) 
 		: map_idx_to_coord_(fill_map_idx_to_coord())
 		, values_(values)
